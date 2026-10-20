@@ -1,4 +1,5 @@
 import baseHandler, { type Env } from "./index";
+import { checkVideoQuota, withVideoQuota } from "./video-quota";
 
 type VideoFrame = { timestampSeconds: number; dataURL: string };
 type VideoDrill = { id: string; name: string; goals?: string[]; cues?: string[] };
@@ -219,27 +220,39 @@ async function callOpenAIVisionFallback(request: Request, env: Env): Promise<Res
   }
 }
 
+async function generateVideoReview(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+  // The quota reservation happens ONCE before this entire retry/fallback chain.
+  const first = await (baseHandler as any).fetch(request.clone(), env, ctx) as Response;
+  if (!RETRYABLE_VIDEO_STATUSES.has(first.status)) return first;
+
+  const retryDelayMs = 900 + Math.floor(Math.random() * 350);
+  console.warn("Video review temporary failure; retrying Gemini chain", { status: first.status, retryDelayMs });
+  await sleep(retryDelayMs);
+
+  const second = await (baseHandler as any).fetch(request.clone(), env, ctx) as Response;
+  if (!RETRYABLE_VIDEO_STATUSES.has(second.status)) return second;
+
+  console.warn("Gemini retry exhausted; switching to OpenAI vision fallback", { status: second.status });
+  return callOpenAIVisionFallback(request.clone(), env);
+}
+
 export default {
   async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
-    const url = new URL(request.url);
-    if (url.pathname !== "/ai/video-review" || request.method !== "POST") {
-      return (baseHandler as any).fetch(request, env, ctx);
+    const path = new URL(request.url).pathname;
+    if (path === "/ai/video-quota") {
+      if (request.method === "OPTIONS") return (baseHandler as any).fetch(request, env, ctx);
+      if (request.method !== "POST") {
+        return new Response(JSON.stringify({ error: { code: "method_not_allowed", message: "Use POST." } }), {
+          status: 405,
+          headers: { ...CORS, "Content-Type": "application/json" },
+        });
+      }
+      return checkVideoQuota(request, env);
     }
 
-    // First attempt uses the normal Gemini 3.8 -> Gemini 3.6 chain in index.ts.
-    const first = await (baseHandler as any).fetch(request.clone(), env, ctx) as Response;
-    if (!RETRYABLE_VIDEO_STATUSES.has(first.status)) return first;
-
-    // Temporary provider overloads are common. Retry the full Gemini chain once
-    // after a short jittered delay before crossing providers.
-    const retryDelayMs = 900 + Math.floor(Math.random() * 350);
-    console.warn("Video review temporary failure; retrying Gemini chain", { status: first.status, retryDelayMs });
-    await sleep(retryDelayMs);
-
-    const second = await (baseHandler as any).fetch(request.clone(), env, ctx) as Response;
-    if (!RETRYABLE_VIDEO_STATUSES.has(second.status)) return second;
-
-    console.warn("Gemini retry exhausted; switching to OpenAI vision fallback", { status: second.status });
-    return callOpenAIVisionFallback(request.clone(), env);
+    if (path === "/ai/video-review" && request.method === "POST") {
+      return withVideoQuota(request, env, () => generateVideoReview(request, env, ctx));
+    }
+    return (baseHandler as any).fetch(request, env, ctx);
   },
 } satisfies ExportedHandler<Env>;
