@@ -40,7 +40,7 @@ Users need no sign-in. Download identities persist across reinstall according to
 
 5. From [Apple PKI](https://www.apple.com/certificateauthority/), download the authentic **Apple Root CA - G3** DER certificate. Base64 encode its bytes and store the value using `npx wrangler secret put APPLE_ROOT_CA_BASE64`. On PowerShell:
    `[Convert]::ToBase64String([IO.File]::ReadAllBytes("AppleRootCA-G3.cer")) | npx wrangler secret put APPLE_ROOT_CA_BASE64`
-6. Set `APP_APPLE_ID` to **Kazushiki Combat's numeric App Store Apple ID**, using `npx wrangler secret put APP_APPLE_ID` (NOT the app bundle identifier).
+6. The public app Apple ID `6818292330` is already set as `APP_APPLE_ID` in `wrangler.toml`. Confirm it matches App Store Connect when deploying.
 7. Keep existing `OPENAI_API_KEY` / `GEMINI_API_KEY` secrets configured.
 8. Only on a test/staging worker, optionally set `ALLOW_SANDBOX_IAP` to `true` to test TestFlight/StoreKit sandbox purchases. Keep it disabled on your production worker.
 9. Test free allowance (1 -> 0 -> 429), Pro allowance (10 -> 0 -> 429), failed review refund, and fresh month rollover **in staging**, then deploy.
@@ -48,7 +48,7 @@ Users need no sign-in. Download identities persist across reinstall according to
 
 ## Release caveats
 
-- **Never deploy** the code without D1 migration and Apple certificate/Apple ID secrets; unconfigured quota routes fail closed.
+- **Never deploy** the code without D1 migration, public Apple ID config, and the Apple certificate secret; unconfigured quota routes fail closed.
 - App Store Connect must contain the exact monthly/yearly subscription product IDs and both must be submitted for Apple's first review. This is independent of implementing video caps.
 - This deliberately uses Apple's signed download identity instead of introducing a login system. Replayed JWS proof consumes the same account quota, although strong device-bound anti-sharing enforcement (App Attest) can be a later improvement if abuse appears.
 - Quota covers **video analysis only**, not Pro AI Coach chat.
