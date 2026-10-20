@@ -1,6 +1,14 @@
 name = "kazushiki-api"
 main = "src/worker.ts"
 compatibility_date = "2026-10-03"
+compatibility_flags = ["nodejs_compat"]
 
 [observability]
 enabled = true
+
+# Create the D1 database with: npx wrangler d1 create kazushiki-video-quota
+# Then replace the placeholder ID below with the actual database_id before deployment.
+[[d1_databases]]
+binding = "VIDEO_QUOTA_DB"
+database_name = "kazushiki-video-quota"
+database_id = "REPLACE_WITH_CLOUDFLARE_D1_ID"
