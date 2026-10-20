@@ -3,6 +3,10 @@ main = "src/worker.ts"
 compatibility_date = "2026-10-03"
 compatibility_flags = ["nodejs_compat"]
 
+# Non-secret public App Store numeric Apple ID for Kazushiki Combat.
+[vars]
+APP_APPLE_ID = "6818292330"
+
 [observability]
 enabled = true
 
