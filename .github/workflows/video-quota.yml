@@ -1,0 +1,27 @@
+name: Video quota checks
+
+on:
+  pull_request:
+  push:
+    branches:
+      - feature/monthly-video-review-quota
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  quota-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Test limits with local SQLite
+        run: npm test
+      - name: Bundle Cloudflare Worker without deploying
+        run: npx wrangler deploy --dry-run --outdir dist-verify
