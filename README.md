@@ -32,9 +32,9 @@ Users need no sign-in. Download identities persist across reinstall according to
 ## One-time setup (required before deployment)
 
 1. `npm install` in this repository. The official Apple App Store Server library is required.
-2. Create a D1 database: `npx wrangler d1 create kazushiki-video-quota`.
-3. Replace `REPLACE_WITH_CLOUDFLARE_D1_ID` in `wrangler.toml` with the returned `database_id`.
-4. Initialize database:
+2. The Cloudflare D1 database `kazushiki-video-quota` has been created and its database ID added to `wrangler.toml`.
+3. Confirm the `VIDEO_QUOTA_DB` binding is attached to this D1 database before deployment.
+4. Initialize its schema (in the Cloudflare D1 Console using the SQL migration file, or via Wrangler):
 
    `npx wrangler d1 execute kazushiki-video-quota --remote --file=./migrations/0001_video_review_quota.sql`
 
