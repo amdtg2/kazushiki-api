@@ -1,6 +1,10 @@
 export interface Env {
   OPENAI_API_KEY?: string;
   GEMINI_API_KEY?: string;
+  VIDEO_QUOTA_DB?: any; // Cloudflare D1 binding; fail closed when absent
+  APPLE_ROOT_CA_BASE64?: string;
+  APP_APPLE_ID?: string; // Numeric App Store app ID, required for production verification
+  ALLOW_SANDBOX_IAP?: string; // "true" only for development / TestFlight
 }
 
 type ChatRole = "system" | "user" | "assistant";

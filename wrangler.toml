@@ -1,6 +1,18 @@
 name = "kazushiki-api"
 main = "src/worker.ts"
 compatibility_date = "2026-10-03"
+compatibility_flags = ["nodejs_compat"]
+
+# Non-secret public App Store numeric Apple ID for Kazushiki Combat.
+[vars]
+APP_APPLE_ID = "6818292330"
 
 [observability]
 enabled = true
+
+# Create the D1 database with: npx wrangler d1 create kazushiki-video-quota
+# Then replace the placeholder ID below with the actual database_id before deployment.
+[[d1_databases]]
+binding = "VIDEO_QUOTA_DB"
+database_name = "kazushiki-video-quota"
+database_id = "aa7a612c-88e5-4694-abfe-c9c4144e2b3e"
