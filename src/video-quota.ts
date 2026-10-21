@@ -103,7 +103,7 @@ async function usedCredits(env: Env, id: string, month: string): Promise<number>
   return row?.used ?? 0;
 }
 
-async function reserve(env: Env, identity: Identity, month: string): Promise<number | null> {
+export async function reserve(env: Env, identity: Identity, month: string): Promise<number | null> {
   // ON CONFLICT and WHERE are executed atomically by D1; concurrent requests
   // cannot both claim the final credit.
   const row = await env.VIDEO_QUOTA_DB.prepare(`
@@ -116,7 +116,7 @@ async function reserve(env: Env, identity: Identity, month: string): Promise<num
   return row?.used ?? null;
 }
 
-async function refund(env: Env, id: string, month: string): Promise<void> {
+export async function refund(env: Env, id: string, month: string): Promise<void> {
   await env.VIDEO_QUOTA_DB.prepare(
     "UPDATE video_review_quota SET used = MAX(0, used - 1) WHERE account_id = ? AND month_key = ?",
   ).bind(id, month).run();
