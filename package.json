@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "test": "node --experimental-strip-types --test tests/video-quota.test.mjs",
+    "check": "npm run test && wrangler deploy --dry-run --outdir dist-verify"
   },
   "devDependencies": {
     "wrangler": "^4.0.0"
