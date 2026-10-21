@@ -15,4 +15,4 @@ enabled = true
 [[d1_databases]]
 binding = "VIDEO_QUOTA_DB"
 database_name = "kazushiki-video-quota"
-database_id = "REPLACE_WITH_CLOUDFLARE_D1_ID"
+database_id = "aa7a612c-88e5-4694-abfe-c9c4144e2b3e"
