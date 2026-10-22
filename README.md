@@ -26,7 +26,7 @@ Never trust an unsigned `isPro` boolean or client-provided usage counters.
 The backend verifies Apple's signing chain, app bundle ID, production Apple app ID,
 the app-transaction identity, product ID, expiry, and revocation.
 It stores one D1 usage row per signed Apple Account app-transaction ID and month.
-Production is the default; sandbox transactions are refused unless explicitly enabled.
+The worker accepts Apple-verified Production and Sandbox transactions (needed by TestFlight and App Review). Quotas are separately keyed by environment.
 Users need no sign-in. Download identities persist across reinstall according to Apple.
 
 ## One-time setup (required before deployment)
@@ -42,7 +42,7 @@ Users need no sign-in. Download identities persist across reinstall according to
    `[Convert]::ToBase64String([IO.File]::ReadAllBytes("AppleRootCA-G3.cer")) | npx wrangler secret put APPLE_ROOT_CA_BASE64`
 6. The public app Apple ID `6818292330` is already set as `APP_APPLE_ID` in `wrangler.toml`. Confirm it matches App Store Connect when deploying.
 7. Keep existing `OPENAI_API_KEY` / `GEMINI_API_KEY` secrets configured.
-8. Only on a test/staging worker, optionally set `ALLOW_SANDBOX_IAP` to `true` to test TestFlight/StoreKit sandbox purchases. Keep it disabled on your production worker.
+8. `ALLOW_SANDBOX_IAP` is enabled in `wrangler.toml` so Apple's TestFlight and App Review sandbox transactions work. The backend independently verifies Apple's signatures and keeps sandbox/production identities separate. This does not mean unsigned sandbox requests are accepted.
 9. Test free allowance (1 -> 0 -> 429), Pro allowance (10 -> 0 -> 429), failed review refund, and fresh month rollover **in staging**, then deploy.
 10. Confirm the shipped iOS build injects `EXPO_PUBLIC_RORK_FUNCTIONS_URL` in `Config.allValues`, pointing to THIS configured worker. The committed `Config.swift` has an empty placeholder, so verify the release build configuration before shipping.
 
