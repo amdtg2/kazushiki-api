@@ -6,7 +6,6 @@
  * D1 reserves one credit atomically BEFORE any model is called.
  */
 import { Buffer } from "node:buffer";
-import { Environment, SignedDataVerifier } from "@apple/app-store-server-library";
 import type { Env } from "./index";
 
 const BUNDLE_ID = "app.rork.n0fxahjvl615phn2ux36f";
@@ -36,7 +35,7 @@ function fail(status: number, code: string, message: string): Response {
   return reply({ error: { code, message } }, status);
 }
 
-function selectEnvironment(token: string, env: Env): Environment {
+function isSandboxTransaction(token: string, env: Env): boolean {
   // This value only selects which verifier to try. Nothing is trusted until
   // Apple's certificate-chain/JWS signature and app identifiers are verified.
   try {
@@ -44,12 +43,12 @@ function selectEnvironment(token: string, env: Env): Environment {
     const decoded = JSON.parse(Buffer.from(raw, "base64url").toString("utf8"));
     if (decoded.environment === "Sandbox" || decoded.receiptType === "Sandbox") {
       if (env.ALLOW_SANDBOX_IAP !== "true") throw new Error("Sandbox disabled");
-      return Environment.SANDBOX;
+      return true;
     }
   } catch (error) {
     throw new Error("Missing or disallowed Apple app transaction");
   }
-  return Environment.PRODUCTION;
+  return false;
 }
 
 async function identify(body: QuotaBody, env: Env): Promise<Identity> {
@@ -60,7 +59,12 @@ async function identify(body: QuotaBody, env: Env): Promise<Identity> {
     throw new Error("Apple verification is not configured");
   }
 
-  const environment = selectEnvironment(body.appTransactionJWS, env);
+  const sandbox = isSandboxTransaction(body.appTransactionJWS, env);
+  // Apple's Node library imports jsrsasign, which initializes secure random state.
+  // Load it only inside a request context: Cloudflare forbids randomness during
+  // Worker global/module startup. Do not move this back to a static import.
+  const { Environment, SignedDataVerifier } = await import("@apple/app-store-server-library");
+  const environment = sandbox ? Environment.SANDBOX : Environment.PRODUCTION;
   const verifier = new SignedDataVerifier(
     [Buffer.from(env.APPLE_ROOT_CA_BASE64, "base64")],
     false,
