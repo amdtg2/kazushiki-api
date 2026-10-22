@@ -5,6 +5,7 @@ on:
   push:
     branches:
       - feature/monthly-video-review-quota
+      - fix/cloudflare-apple-verifier-startup
   workflow_dispatch:
 
 permissions:
@@ -25,3 +26,43 @@ jobs:
         run: npm test
       - name: Bundle Cloudflare Worker without deploying
         run: npx wrangler deploy --dry-run --outdir dist-verify
+      - name: Boot Worker in local Cloudflare runtime and exercise verifier import
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx wrangler dev --local --port 8787 --var APPLE_ROOT_CA_BASE64:ZHVtbXk= > /tmp/kazushiki-worker.log 2>&1 &
+          WORKER_PID=$!
+          trap 'kill "$WORKER_PID" 2>/dev/null || true' EXIT
+
+          ready=0
+          for attempt in $(seq 1 45); do
+            if curl -fsS http://127.0.0.1:8787/ > /tmp/kazushiki-health.json; then
+              ready=1
+              break
+            fi
+            sleep 1
+          done
+          if [ "$ready" != "1" ]; then
+            cat /tmp/kazushiki-worker.log
+            echo "Worker could not start (including global-scope validation)." >&2
+            exit 1
+          fi
+          node -e 'const d=require("/tmp/kazushiki-health.json");if(d.ok!==true)process.exit(1)'
+
+          # A bogus signed transaction must fail closed with a controlled
+          # error, but must NOT crash due to Apple SDK module initialization.
+          status=$(curl -sS -o /tmp/kazushiki-reply.json -w '%{http_code}' \
+            -H 'content-type: application/json' \
+            --data '{"appTransactionJWS":"e30.eyJlbnZpcm9ubWVudCI6IlByb2R1Y3Rpb24ifQ.invalid"}' \
+            http://127.0.0.1:8787/ai/video-quota)
+          echo "Expected invalid-JWS status: $status"
+          cat /tmp/kazushiki-reply.json
+          if [ "$status" != "503" ]; then
+            cat /tmp/kazushiki-worker.log
+            exit 1
+          fi
+          if grep -q "Disallowed operation called within global scope" /tmp/kazushiki-worker.log; then
+            cat /tmp/kazushiki-worker.log
+            echo "Apple SDK still initializes secure randomness outside request context." >&2
+            exit 1
+          fi
