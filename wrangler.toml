@@ -6,6 +6,9 @@ compatibility_flags = ["nodejs_compat"]
 # Non-secret public App Store numeric Apple ID for Kazushiki Combat.
 [vars]
 APP_APPLE_ID = "6818292330"
+# Apple App Review and TestFlight use verified Sandbox StoreKit transactions.
+# Quota identities are separated by environment; JWS chain is still verified.
+ALLOW_SANDBOX_IAP = "true"
 
 [observability]
 enabled = true
